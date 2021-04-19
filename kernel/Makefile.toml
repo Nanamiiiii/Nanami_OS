@@ -1,0 +1,14 @@
+[tasks.build]
+command = "cargo"
+args = ["+nightly", "build", "--release"]
+
+[tasks.clean]
+dependencies = ["cargo-cl", "rm-bin"]
+
+[tasks.cargo-cl]
+script = "cargo clean"
+
+[tasks.rm-bin]
+ignore_errors = true
+script = "rm ./kernel.elf"
+

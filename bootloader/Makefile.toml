@@ -1,0 +1,9 @@
+[tasks.build]
+command = "cargo"
+args = ["+nightly", "build", "--release"]
+
+[tasks.clean]
+dependencies = ["cargo-cl"]
+[tasks.cargo-cl]
+script = "cargo clean"
+

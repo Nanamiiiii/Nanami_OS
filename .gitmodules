@@ -1,3 +1,0 @@
-[submodule "bootloader-rust"]
-	path = bootloader-rust
-	url = git@github.com:Nanamiiiii/bootloader-rs.git
