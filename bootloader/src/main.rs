@@ -6,7 +6,9 @@ use uefi::prelude::*;
 use uefi::proto::loaded_image::LoadedImage;
 use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::proto::media::file::{File, RegularFile, Directory, FileMode, FileAttribute, FileType, FileInfo};
+use uefi::table::boot::{AllocateType, MemoryType};
 use uefi::data_types::Align;
+use core::slice::from_raw_parts_mut;
 use core::panic::PanicInfo;
 use core::fmt::Write;
 
@@ -95,7 +97,15 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
     let kernel_info: &FileInfo = kernel_file
         .get_info::<FileInfo>(&mut fileinfo_buf[..])
         .unwrap_success();
-    let _kernel_file_size = kernel_info.file_size() as usize;
+    let _kernel_file_size: u64 = kernel_info.file_size();
+    const KERNEL_BASE_ADDR: usize = 0x100000;
+
+    let kernel_ptr: u64 = bs.allocate_pages(AllocateType::Address(KERNEL_BASE_ADDR), MemoryType::LOADER_DATA, (_kernel_file_size as usize + 0xfff) / 0x1000).unwrap_success();
+    let kernel_buf: &mut [u8] = unsafe { from_raw_parts_mut(kernel_ptr as *mut u8, _kernel_file_size as usize) }; 
+    kernel_file.read(kernel_buf).unwrap_success();
+
+    writeln!(std_out, "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
+    
     
     loop {}
     
