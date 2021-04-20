@@ -62,6 +62,17 @@ sudo umount ${DEV_ENV}/mnt
 rm -rf ${DEV_ENV}/mnt
 '''
 
+[tasks.rm-img]
+script = "rm ${IMG_NAME}"
+
+[tasks.clean]
+dependencies = [
+	"rm-img",
+	{ name = "clean", path = "bootloader"},
+	{ name = "clean", path = "kernel"},
+]
+
+
 [config]
 skip_core_tasks = true
 

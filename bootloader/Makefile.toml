@@ -10,10 +10,13 @@ command = "cargo"
 args = ["+nightly", "build", "--debug"]
 
 [tasks.clean]
-dependencies = ["cargo-cl"]
+dependencies = ["cargo-cl", "rm-efi"]
 
 [tasks.cargo-cl]
 script = "cargo clean"
+
+[tasks.rm-efi]
+script = "rm ./bootx64.efi"
 
 [config]
 skip_core_tasks = true

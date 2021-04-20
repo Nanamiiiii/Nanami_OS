@@ -25,6 +25,10 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
     let bs = system_table.boot_services();
     // Getting memory map
     let memorymap_buffer: &mut [u8] = &mut [0; 4096 * 4];
+    let _memory_map_size: usize = bs.memory_map_size();
+    {
+        writeln!(std_out, "memorymap buf: {:p}, memorymap size: {:08x}", memorymap_buffer.as_mut_ptr(), _memory_map_size).unwrap();
+    }
     let (_memory_map_key, memory_descriptor_itr) = bs.memory_map(memorymap_buffer).unwrap_success();
 
     // Opening root directory
@@ -105,8 +109,7 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
     kernel_file.read(kernel_buf).unwrap_success();
 
     writeln!(std_out, "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
-    
-    
+     
     loop {}
     
 }
