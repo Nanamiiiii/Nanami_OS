@@ -1,0 +1,69 @@
+[env]
+DEV_ENV = "./devenv"
+OVMF_DIR = "${DEV_ENV}/OVMF"
+IMG_NAME = "${DEV_ENV}/nanami_os.img"
+BOOT_LOADER = "./bootloader/bootx64.efi"
+KERNEL = "./kernel/kernel.elf"
+
+[tasks.build]
+dependencies = [
+	{ name = "build", path = "bootloader" },
+	{ name = "build", path = "kernel" },
+]
+
+[tasks.run]
+env = { "MAKE_PROFILE" = "release" }
+run_task = "qemu-run"
+
+[tasks.qemu-run]
+dependencies = ["prepare-img", "qemu-option"]
+script = '''
+qemu-system-x86_64 \
+	-drive if=pflash,format=raw,file=${OVMF_DIR}/OVMF_CODE.fd \
+	-drive if=pflash,format=raw,file=${OVMF_DIR}/OVMF_VARS.fd \
+	-drive format=raw,media=disk,index=0,file=${IMG_NAME} \
+	-device nec-usb-xhci,id=xhci \
+	-device usb-mouse -device usb-kbd \
+	-device isa-debug-exit ${QEMU_OPTION}
+'''
+
+[tasks.qemu-option]
+env = { "QEMU_OPTION" = "-monitor stdio"}
+
+[tasks.prepare-img.run_task]
+name = ["copy-bin"]
+cleanup_task = "umount-img"
+fork = true
+
+[tasks.create-img]
+script = '''
+qemu-img create -f raw "${IMG_NAME}" 200M
+mkfs.fat -n "NANAMI OS" -s 2 -f 2 -F 32 -R 32 "${IMG_NAME}"
+'''
+
+[tasks.mount-img]
+dependencies = ["create-img"]
+script = '''
+mkdir -p ${DEV_ENV}/mnt
+sudo mount -o loop "${IMG_NAME}" ${DEV_ENV}/mnt
+'''
+
+[tasks.copy-bin]
+dependencies = ["mount-img"]
+script = '''
+sudo mkdir -p ${DEV_ENV}/mnt/efi/boot
+sudo cp ${BOOT_LOADER} ${DEV_ENV}/mnt/efi/boot/bootx64.efi
+sudo cp ${KERNEL} ${DEV_ENV}/mnt/kernel.elf
+'''
+
+[tasks.umount-img]
+script = '''
+sudo umount ${DEV_ENV}/mnt
+rm -rf ${DEV_ENV}/mnt
+'''
+
+[config]
+skip_core_tasks = true
+
+[tasks.default]
+alias = "build"
