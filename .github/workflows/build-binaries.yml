@@ -1,0 +1,36 @@
+name: build-binaries
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: install rust nightly toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rust-src
+        
+    - name: install cargo-make
+      uses: actions-rs/install@v0.1
+      with:
+        crate: cargo-make
+        version: latest
+        use-tool-cache: true
+      
+    - run: sudo apt get update
+    - name: install lld linker
+      run: sudo apt install lld
+      
+    - name: Build all binaries
+      run: cargo make
