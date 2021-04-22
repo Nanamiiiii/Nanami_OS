@@ -66,7 +66,7 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
         writeln!(memorymap_file, "Index, Type, Type(name), PhysicalStart, NumberOfPages, Attribute").unwrap();
 
         // Writing memory descriptor
-        for (i,mem_desc) in memory_descriptor_itr.enumerate() {
+        for (i, mem_desc) in memory_descriptor_itr.enumerate() {
             writeln!(
                 memorymap_file, 
                 "{}, {:x}, {:?}, {:08x}, {}, {:x}", 
@@ -106,10 +106,13 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
 
     let kernel_ptr: u64 = bs.allocate_pages(AllocateType::Address(KERNEL_BASE_ADDR), MemoryType::LOADER_DATA, (_kernel_file_size as usize + 0xfff) / 0x1000).unwrap_success();
     let kernel_buf: &mut [u8] = unsafe { from_raw_parts_mut(kernel_ptr as *mut u8, _kernel_file_size as usize) }; 
-    kernel_file.read(kernel_buf).unwrap_success();
+    let _kernel_read_size = kernel_file.read(kernel_buf).unwrap_success();
+    assert_eq!(_kernel_read_size, _kernel_file_size as usize);
 
     writeln!(std_out, "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
-     
+
+    let (_systable_runtime, _descriptor_itr) = system_table.exit_boot_services(_handle, memorymap_buffer).unwrap_success();
+ 
     loop {}
     
 }

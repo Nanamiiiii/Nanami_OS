@@ -49,7 +49,7 @@ sudo mount -o loop "${IMG_NAME}" ${DEV_ENV}/mnt
 '''
 
 [tasks.copy-bin]
-dependencies = ["mount-img"]
+dependencies = ["mount-img", "build"]
 script = '''
 sudo mkdir -p ${DEV_ENV}/mnt/efi/boot
 sudo cp ${BOOT_LOADER} ${DEV_ENV}/mnt/efi/boot/bootx64.efi
