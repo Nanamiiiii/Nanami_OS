@@ -6,10 +6,21 @@ BOOT_LOADER = "./bootloader/bootx64.efi"
 KERNEL = "./kernel/kernel.elf"
 
 [tasks.build]
-dependencies = [
-	{ name = "build", path = "bootloader" },
-	{ name = "build", path = "kernel" },
-]
+dependencies = ["build-bs", "build-kernel"]
+
+[tasks.build-bs]
+script = '''
+cd ./bootloader
+cargo make
+cd ../
+'''
+
+[tasks.build-kernel]
+script = '''
+cd ./kernel
+cargo make
+cd ../
+'''
 
 [tasks.run]
 env = { "MAKE_PROFILE" = "release" }

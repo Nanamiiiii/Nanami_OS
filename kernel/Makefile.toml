@@ -12,3 +12,5 @@ script = "cargo clean"
 ignore_errors = true
 script = "rm ./kernel.elf"
 
+[tasks.default]
+alias = "build"
