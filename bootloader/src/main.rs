@@ -11,6 +11,7 @@ use uefi::data_types::Align;
 use core::slice::from_raw_parts_mut;
 use core::panic::PanicInfo;
 use core::fmt::Write;
+use elf_rs::*;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -104,13 +105,38 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
     let _kernel_file_size: u64 = kernel_info.file_size();
     const KERNEL_BASE_ADDR: usize = 0x100000;
 
-    let kernel_ptr: u64 = bs.allocate_pages(AllocateType::Address(KERNEL_BASE_ADDR), MemoryType::LOADER_DATA, (_kernel_file_size as usize + 0xfff) / 0x1000).unwrap_success();
-    let kernel_buf: &mut [u8] = unsafe { from_raw_parts_mut(kernel_ptr as *mut u8, _kernel_file_size as usize) }; 
-    let _kernel_read_size = kernel_file.read(kernel_buf).unwrap_success();
+    // Load kernel to memory pool
+    let tmp_kernel_ptr = bs.allocate_pool(
+        MemoryType::LOADER_DATA, 
+        (_kernel_file_size as usize + 0xfff) / 0x1000)
+        .unwrap_success();
+
+    let tmp_kernel_buf: &mut [u8] = unsafe { from_raw_parts_mut(tmp_kernel_ptr as *mut u8, _kernel_file_size as usize) }; 
+    let _kernel_read_size = kernel_file.read(tmp_kernel_buf).unwrap_success();
     assert_eq!(_kernel_read_size, _kernel_file_size as usize);
+    kernel_file.close();
+
+    // Reading ELF
+    let elf = Elf::from_bytes(&tmp_kernel_buf).unwrap();
+    let e = match elf {
+        Elf::Elf64(tmp) => tmp,
+        _ => panic!("An error occured while reading ELF."),
+    };
+    let mut kernel_st: u64 = core::u64::MAX;
+    let mut kernel_ed: u64 = 0;
+    writeln!(std_out, "{:?} {:?}", e, e.header()).unwrap();
+    for _header_iter in e.program_header_iter() {
+        writeln!(std_out, "{:x?}", _header_iter).unwrap();
+        let header = _header_iter.ph;
+        if header.ph_type() == ProgramType::LOAD {
+            kernel_st = core::cmp::min(kernel_st, header.vaddr());
+            kernel_ed = core::cmp::max(kernel_ed, header.memsz());
+        }
+    }
 
     writeln!(std_out, "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
 
+    // Exit boot service
     let (_systable_runtime, _descriptor_itr) = system_table.exit_boot_services(_handle, memorymap_buffer).unwrap_success();
  
     loop {}

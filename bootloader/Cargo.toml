@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 uefi = { git = "https://github.com/rust-osdev/uefi-rs.git"}
+elf_rs = "0.1.3"
