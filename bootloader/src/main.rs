@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(abi_efiapi)]
+#![feature(asm)]
 
 use uefi::prelude::*;
 use uefi::proto::loaded_image::LoadedImage;
@@ -10,7 +11,6 @@ use uefi::table::boot::{AllocateType, MemoryType};
 use uefi::data_types::Align;
 use core::slice::from_raw_parts_mut;
 use core::panic::PanicInfo;
-use core::fmt::Write;
 use elf_rs::*;
 
 #[panic_handler]
@@ -20,25 +20,25 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> Status {
-    let std_out = system_table.stdout();
-    writeln!(std_out, "Hello, World!").unwrap();
+    use core::fmt::Write;
+  
+    writeln!(system_table.stdout(), "Hello, World!").unwrap();
 
     let bs = system_table.boot_services();
+
     // Getting memory map
-    let memorymap_buffer: &mut [u8] = &mut [0; 4096 * 4];
+    let mut memorymap_buffer= [0; 4096 * 4];
     let _memory_map_size: usize = bs.memory_map_size();
-    {
-        writeln!(std_out, "memorymap buf: {:p}, memorymap size: {:08x}", memorymap_buffer.as_mut_ptr(), _memory_map_size).unwrap();
-    }
-    let (_memory_map_key, memory_descriptor_itr) = bs.memory_map(memorymap_buffer).unwrap_success();
+    writeln!(system_table.stdout(), "memorymap buf: {:p}, memorymap size: {:08x}", memorymap_buffer.as_mut_ptr(), _memory_map_size).unwrap();
+    let (_memory_map_key, memory_descriptor_itr) = bs.memory_map(&mut memorymap_buffer).unwrap_success();
 
     // Opening root directory
     let loaded_image = bs.handle_protocol::<LoadedImage>(_handle).unwrap_success().get();
     let device;
     let mut root_dir: Directory;
-    unsafe{ device = (*loaded_image).device(); }
+    unsafe { device = (*loaded_image).device(); }
     let file_system = bs.handle_protocol::<SimpleFileSystem>(device).unwrap_success().get();
-    unsafe{ root_dir = (*file_system).open_volume().unwrap_success(); }
+    unsafe { root_dir = (*file_system).open_volume().unwrap_success(); }
 
     {
         // to use writeln! macro to RegularFile
@@ -91,7 +91,7 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
 
     /* TO GET SIZE OF 'FileInfo'
     let info_size = kernel_file.get_info::<FileInfo>(&mut []).expect_error("");
-    writeln!(std_out, "FileInfo size = {:?}", info_size).unwrap();
+    writeln!(system_table.stdout(), "FileInfo size = {:?}", info_size).unwrap();
     */
 
     const FILEINFO_SIZE: usize = 102; 
@@ -124,9 +124,9 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
     };
     let mut kernel_st: u64 = core::u64::MAX;
     let mut kernel_ed: u64 = 0;
-    writeln!(std_out, "{:?} {:?}", e, e.header()).unwrap();
+    writeln!(system_table.stdout(), "{:?} {:?}", e, e.header()).unwrap();
     for _header_iter in e.program_header_iter() {
-        writeln!(std_out, "{:x?}", _header_iter).unwrap();
+        writeln!(system_table.stdout(), "{:x?}", _header_iter).unwrap();
         let header = _header_iter.ph;
         if header.ph_type() == ProgramType::LOAD {
             kernel_st = core::cmp::min(kernel_st, header.vaddr());
@@ -134,10 +134,10 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
         }
     }
 
-    writeln!(std_out, "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
+    writeln!(system_table.stdout(), "Kernel: 0x{:x} ({} bytes)", KERNEL_BASE_ADDR, _kernel_file_size).unwrap();
 
     // Exit boot service
-    let (_systable_runtime, _descriptor_itr) = system_table.exit_boot_services(_handle, memorymap_buffer).unwrap_success();
+    let (_systable_runtime, _descriptor_itr) = system_table.exit_boot_services(_handle, &mut memorymap_buffer).unwrap_success();
  
     loop {}
     

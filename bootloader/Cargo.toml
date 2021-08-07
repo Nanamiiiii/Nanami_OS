@@ -7,5 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = { git = "https://github.com/rust-osdev/uefi-rs.git"}
+uefi = "0.11.0"
 elf_rs = "0.1.3"
