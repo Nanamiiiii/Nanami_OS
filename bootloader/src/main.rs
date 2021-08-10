@@ -7,7 +7,7 @@ use uefi::prelude::*;
 use uefi::proto::loaded_image::LoadedImage;
 use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::proto::media::file::{File, RegularFile, Directory, FileMode, FileAttribute, FileType, FileInfo};
-use uefi::table::boot::{AllocateType, MemoryType};
+use uefi::table::boot::MemoryType;
 use uefi::data_types::Align;
 use core::slice::from_raw_parts_mut;
 use core::panic::PanicInfo;
@@ -89,10 +89,9 @@ pub extern "C" fn efi_main(_handle: Handle, system_table: SystemTable<Boot>) -> 
         _ => panic!("Connot read kernel!"),
     };
 
-    /* TO GET SIZE OF 'FileInfo'
+    /* TO GET SIZE OF 'FileInfo' */
     let info_size = kernel_file.get_info::<FileInfo>(&mut []).expect_error("");
     writeln!(system_table.stdout(), "FileInfo size = {:?}", info_size).unwrap();
-    */
 
     const FILEINFO_SIZE: usize = 102; 
     let fileinfo_buf: &mut [u8] = &mut [0u8; FILEINFO_SIZE];
