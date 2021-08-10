@@ -1,6 +1,7 @@
 [env]
 DEV_ENV = "./devenv"
 OVMF_DIR = "${DEV_ENV}/OVMF"
+OVMF_SRC = "/usr/share/OVMF"
 IMG_NAME = "${DEV_ENV}/nanami_os.img"
 BOOT_LOADER = "./bootloader/bootx64.efi"
 KERNEL = "./kernel/kernel.elf"
@@ -23,11 +24,15 @@ cd ../
 '''
 
 [tasks.run]
-env = { "MAKE_PROFILE" = "release" }
+env = { "MAKE_PROFILE" = "release", "QEMU_OPTION" = "-monitor stdio" }
+run_task = "qemu-run"
+
+[tasks.test]
+env = { "MAKE_PROFILE" = "test", "QEMU_OPTION" = "-monitor none -display none" }
 run_task = "qemu-run"
 
 [tasks.qemu-run]
-dependencies = ["prepare-img", "qemu-option"]
+dependencies = ["prepare-img", "ovmf-exist"]
 script = '''
 qemu-system-x86_64 \
 	-drive if=pflash,format=raw,file=${OVMF_DIR}/OVMF_CODE.fd \
@@ -38,8 +43,17 @@ qemu-system-x86_64 \
 	-device isa-debug-exit ${QEMU_OPTION}
 '''
 
-[tasks.qemu-option]
-env = { "QEMU_OPTION" = "-monitor stdio"}
+[tasks.ovmf-exist.condition]
+files_not_exist = [
+    "${CARGO_MAKE_WORKING_DIRECTORY}/devenv/OVMF/OVMF_CODE.fd",
+    "${CARGO_MAKE_WORKING_DIRECTORY}/devenv/OVMF/OVMF_VARS.fd"
+]
+
+[tasks.ovmf-exist]
+script = '''
+mkdir -p ./devenv/OVMF
+cp ${OVMF_SRC}/OVMF_CODE.fd ${OVMF_SRC}/OVMF_VARS.fd ./devenv/OVMF
+'''
 
 [tasks.prepare-img.run_task]
 name = ["copy-bin"]
